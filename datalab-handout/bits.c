@@ -125,7 +125,10 @@ extern int printf(const char *, ...);
  *   Rating: 2
  */
 long copyLSB(long x) {
-    return 2;
+    // first we get the least bit: 0 or 1 by x & 1
+    // then we compute the negation of 0 or 1, we can use : -a = ~a + 1;
+    // we notice the result must be 0 or -1 in decimal;
+    return ~(x&1)+1;
 }
 /*
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -137,7 +140,15 @@ long copyLSB(long x) {
  *   Rating: 2
  */
 long allOddBits(long x) {
-    return 2;
+      // create binary AA: 10101010, AA | x, then shift left by 8 bits， then 16 bts, 32bits
+      // if all odd-numbered bits are 1, you will get 111111..1111, + 1 = 00000000...0000,
+      // 
+      long AA = 170;
+      long b = (AA << 8) | AA;
+      long c = (AA << 16) | AA;
+      long c = (AA << 32) | AA; // c is 0xAAAAAAAAAAAAAAAA
+       
+    return !( c & x ^ c);
 }
 /*
  * isNotEqual - return 0 if x == y, and 1 otherwise
@@ -170,6 +181,8 @@ long dividePower2(long x, long n) {
  *   Rating: 3
  */
 long remainderPower2(long x, long n) {
+  
+
     return 2L;
 }
 /*
