@@ -128,7 +128,7 @@ long copyLSB(long x) {
     // first we get the least bit: 0 or 1 by x & 1
     // then we compute the negation of 0 or 1, we can use : -a = ~a + 1;
     // we notice the result must be 0 or -1 in decimal;
-    return ~(x&1)+1;
+    return ~(x & 1) + 1;
 }
 /*
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -140,15 +140,15 @@ long copyLSB(long x) {
  *   Rating: 2
  */
 long allOddBits(long x) {
-      // create binary AA: 10101010, AA | x, then shift left by 8 bits， then 16 bts, 32bits
-      // if all odd-numbered bits are 1, you will get 111111..1111, + 1 = 00000000...0000,
-      // 
-      long AA = 170;
-      long b = (AA << 8) | AA;
-      long c = (AA << 16) | AA;
-      long c = (AA << 32) | AA; // c is 0xAAAAAAAAAAAAAAAA
-       
-    return !( c & x ^ c);
+    // create binary AA: 10101010, AA | x, then shift left by 8 bits， then 16, 32 bits
+    // you get 0xAAAAAAAAAAAAAAAA, then (c & x ^ c),it is 0 if all odd-numbered bits are 1
+ 
+    long AA = 170;
+    long a = (AA << 8) | AA;
+    long b = (a << 16) | a;
+    long c = (b << 32) | b; // c is 0xAAAAAAAAAAAAAAAA
+
+    return !(c & x ^ c);
 }
 /*
  * isNotEqual - return 0 if x == y, and 1 otherwise
@@ -158,7 +158,9 @@ long allOddBits(long x) {
  *   Rating: 2
  */
 long isNotEqual(long x, long y) {
-    return 2L;
+    // first x^y, then we get 0 or non 0, then !(x^y) we get 1 or 0, 
+    // how to convert 0 or 1 to 1 or 0. we use xor, |.
+    return !(x^y)^1 ;
 }
 /*
  * dividePower2 - Compute x/(2^n), for 0 <= n <= 62
@@ -169,7 +171,7 @@ long isNotEqual(long x, long y) {
  *   Rating: 2
  */
 long dividePower2(long x, long n) {
-    return 2L;
+    return x >> n;
 }
 // 3
 /*
@@ -181,9 +183,19 @@ long dividePower2(long x, long n) {
  *   Rating: 3
  */
 long remainderPower2(long x, long n) {
-  
-
-    return 2L;
+// whne we compute  x % 2^n, actually it is x & (2^n - 1). using + ~0 to subtract 1
+  // if x is negative, 
+  long mod =  x & ((1 << n) + ~0); // if it is positive, mod is result
+  // if x is negative,according the above formular we will get :
+  //        actual    expected
+  // -5 % 8    3        -5
+  // -6 % 8    2         -6
+  // -11 % 8   5          -3
+  // we found out we use actual-8(2^n) to get the correct result
+  long isNeg = x >> 63; // if it is positive, we get 0, otherwise -1(0xFFFFFFFFFFFFFFFF)
+  long bias = isNeg & (1 << n); // 
+  long result = mod + (~bias + 1);
+  return result;
 }
 /*
  * rotateLeft - Rotate x to the left by n
@@ -195,8 +207,17 @@ long remainderPower2(long x, long n) {
  *   Rating: 3
  */
 long rotateLeft(long x, long n) {
-    return 2;
-}
+    // for instance: x = 1101 1001, n = 4
+    // we want the result: 1001 1101
+    // we need to consider it's positive or not 
+    // shift x to the right by 64-n bits, we can get the dropped part:1111 1101
+    // 
+    long a =  x >> (64+ ~n +1); // 1111 1101
+    long b = x << n; // 1001 0000
+    long mask =  ~(1 >> (64+ ~n +1)<<1);// with this , we can get 0000 1111
+    long result = a ^ (b & mask); //  a | (b & mask) is also available
+    return result;
+  }
 /*
  * bitMask - Generate a mask consisting of all 1's
  *   between lowbit and highbit
