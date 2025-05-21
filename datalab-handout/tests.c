@@ -7,94 +7,112 @@
 
 /* Convert from bit level representation to floating point number */
 float u2f(unsigned u) {
-    union {
-        unsigned u;
-        float f;
-    } a;
-    a.u = u;
-    return a.f;
+  union {
+    unsigned u;
+    float f;
+  } a;
+  a.u = u;
+  return a.f;
 }
 
 /* Convert from floating point number to bit-level representation */
 unsigned f2u(float f) {
-    union {
-        unsigned u;
-        float f;
-    } a;
-    a.f = f;
-    return a.u;
+  union {
+    unsigned u;
+    float f;
+  } a;
+  a.f = f;
+  return a.u;
+}
+
+//1
+int test_bitXor(int x, int y)
+{
+  return x^y;
+}
+int test_tmin(void) {
+  return 0x80000000;
 }
 //2
-long test_copyLSB(long x)
-{
-  return (x & 0x1L) ? -1 : 0;
+int test_isTmax(int x) {
+    return x == 0x7FFFFFFF;
 }
-long test_allOddBits(long x) {
+int test_allOddBits(int x) {
   int i;
-  for (i = 1; i < 64; i+=2)
-      if ((x & (1L<<i)) == 0)
-          return 0L;
-  return 1L;
+  for (i = 1; i < 32; i+=2)
+      if ((x & (1<<i)) == 0)
+   return 0;
+  return 1;
 }
-long test_isNotEqual(long x, long y)
-{
-  return (long) (x != y);
-}
-long test_dividePower2(long x, long n)
-{
-    long p2n = 1L<<n;
-    return x/p2n;
+
+
+
+
+
+
+
+int test_negate(int x) {
+  return -x;
 }
 //3
-long test_remainderPower2(long x, long n)
+
+
+int test_isAsciiDigit(int x) {
+  return (0x30 <= x) && (x <= 0x39);
+}
+int test_conditional(int x, int y, int z)
 {
-    long p2n = 1L<<n;
-    return x%p2n;
+  return x?y:z;
 }
-long test_rotateLeft(long x, long n) {
-  unsigned long u = (unsigned long) x;
-  long i;
-  for (i = 0; i < n; i++) {
-      unsigned long msb = u >> 63;
-      unsigned long rest = u << 1;
-      u = rest | msb;
-  }
-  return (long) u;
-}
-long test_bitMask(long highbit, long lowbit)
+int test_isLessOrEqual(int x, int y)
 {
-  long result = 0L;
-  int i;
-  for (i = lowbit; i <= highbit; i++)
-    result |= 1L << i;
-  return result;
-}
-long test_isPower2(long x) {
-  long i;
-  for (i = 0; i < 63; i++) {
-    if (x == 1L<<i)
-      return 1;
-  }
-  return 0;
+  return x <= y;
 }
 //4
-long test_allAsciiDigits(long x) {
-    int i;
-    long ok = 1;
-    for (i = 0; i < 64; i+=8) {
-        long b = (x >> i) & 0xFF;
-        ok = ok && (0x30 <= b) && (b <= 0x39);
-    }
-    return ok;
-}
-long test_trueThreeFourths(long x)
+int test_logicalNeg(int x)
 {
-  return (long) (((__int128) x * 3L)/4L);
+  return !x;
 }
-long test_bitCount(long x) {
-  long result = 0;
-  long i;
-  for (i = 0; i < 64; i++)
-    result += (x >> i) & 0x1;
-  return result;
+int test_howManyBits(int x) {
+    unsigned int a, cnt;
+    x = x<0 ? -x-1 : x;
+    a = (unsigned int)x;
+    for (cnt=0; a; a>>=1, cnt++)
+        ;
+
+    return (int)(cnt + 1);
+}
+//float
+unsigned test_floatScale2(unsigned uf) {
+  float f = u2f(uf);
+  float tf = 2*f;
+  if (isnan(f))
+    return uf;
+  else
+    return f2u(tf);
+}
+int test_floatFloat2Int(unsigned uf) {
+  float f = u2f(uf);
+  int x = (int) f;
+  return x;
+}
+unsigned test_floatPower2(int x) {
+  float result = 1.0;
+  float p2 = 2.0;
+  int recip = (x < 0);
+  /* treat tmin specially */
+  if ((unsigned)x == 0x80000000) {
+      return 0;
+  }
+  if (recip) {
+    x = -x;
+    p2 = 0.5;
+  }
+  while (x > 0) {
+    if (x & 0x1)
+      result = result * p2;
+    p2 = p2 * p2;
+    x >>= 1;
+  }
+  return f2u(result);
 }
