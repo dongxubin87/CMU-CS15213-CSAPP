@@ -143,6 +143,9 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
+  // x^y -> (x&~y) | (~x&y)
+  // we use morgan's law to deal with "|"
+  // x|y =  ~(-x&~y)
   return ~((~(~x&y))&(~(x&~y)));
 }
 /* 
@@ -152,9 +155,7 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
-
+  return 1 << 31;
 }
 //2
 /*
@@ -165,7 +166,10 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+  // the idea is: Tmax is: 0111 1111(in 8-bit case), shift 1 bit to the left, then +1, you get 1111 1111
+  // then +1, we get 0000 0000. that is !(~(x+x+1)) .
+  // but if x = 1111 1111, we still get 0000 0000. so & !!(~x) can fix it. 
+  return !(~(x+x+1)) & !!(~x);
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -176,7 +180,9 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  int a =  ((x & (x>>16))>>8) & (x & (x>>16)) & 0xAA; // we get 0xAA, if all odd-numbered bits are 1;
+  int b = a ^ 0xAA; // 0, if a = 0xAA
+  return !b;
 }
 /* 
  * negate - return -x 
@@ -186,7 +192,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x+1;
 }
 //3
 /* 
@@ -199,7 +205,9 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  // with subtraction,to make sure x is in the right range
+  int a = ((x + ~0x30 + 1) | (0x39 + ~x + 1)) >> 31; // 0 ，if it is positive
+  return !a;
 }
 /* 
  * conditional - same as x ? y : z 
@@ -209,7 +217,8 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask = ~(!x) + 1;
+  return (~mask & y) | (mask & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -219,7 +228,9 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  // two cases: x<0 && y>0 
+  // x,y have the same sign. it will over flow, if not.
+  return ((x>>31) & !(y>>31)) | !((x^y) >> 31) & !((y + ~x + 1)>>31);
 }
 //4
 /* 
@@ -231,7 +242,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  return ((x|~x+1)>>31)+1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -246,7 +257,28 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  // the main idea is to get the most right 1,for negative number, we need to reverse it
+  // because for negative number, we need to find the most right 0.
+  // the idea is: first we shift x to the right by the 16 bits, check if it is 0 or not.
+  int sign = x >> 31;
+  x = x ^ sign; // for negative number, we need to reverse it 
+  int b16 =!!(x>>16) << 4; // if (x>>16) is not 0, which means the most right 1 is at the 16-bit position
+  x = x >> b16;
+
+  int b8 = !!(x>>8) << 3;
+  x = x >> b8;
+
+  int b4 = !!(x>>4) << 2;
+  x = x >> b4;
+
+  int b2 = !!(x>>2) << 1;
+  x = x >> b2;
+
+  int b1 = !!(x>>1);
+  x = x >> b1;
+
+  int b0 = x;
+  return b16 + b8 + b4 + b2 + b1 + b0 + 1; // add another 1, reprensenting a positve need a sign bit.
 }
 //float
 /* 
@@ -261,7 +293,20 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  // extract sign
+  int sign = uf & 0x80000000u;
+  // extract exponent:
+  int exponent = uf & 0x7f800000u;
+  int isDenormalized = !exponent;
+  // if exp = 1111 1111 return uf
+  // exp = 0000 0000 , uf << 1
+  // 0000 0000 < exp < 1111 1111, exp + 1,
+  if(isDenormalized){
+    uf = sign | (uf << 1); // shift uf ot the left 
+  }else if(exponent != 0x7f800000u){
+    uf = uf + 0x00800000u; // add 1 to exponent
+  }
+  return uf;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -276,7 +321,35 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  // val = (-1)^s * M * 2^E; E = e - bias; 
+  //  if exponent = 0000 0000, e = 1 - bias
+  // bias = 2^7  = 127
+  int sign = (uf >> 31) & 1;
+  int exp = (uf >> 23) & 0xff;
+  int frac = uf & 0x7FFFFF;  
+  int bias = 127;
+  int E = exp - bias;
+  // nan or out of range, return 0x80000000u
+  if(exp == 0xff || E > 31){
+    return 0x80000000u;
+  }
+  if(E <= 0){
+    return 0;
+  }
+  int M = frac | 0x800000;
+  int value;
+  // actually we create a 24-bit, like M * 2^23, but we want M * 2^E
+  if(E>23){
+   value = M << (E-23);
+  }else{
+    value = M >> (23-E);
+  }
+
+  if(sign){
+    value = -value;
+  }
+
+  return value;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
