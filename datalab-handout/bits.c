@@ -365,5 +365,24 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+  // 2^x, so for denormal there is only 1 1bit in frac. otherwise it can't be 
+  // represented as 2^x format: 2^x = 2^(1-127) * M, M = frac = 2^(-1 ~ -23)
+  // sign always 0, 2^x > 0
+  // smallest denormal: 000000000...1    M = 2^-23,  val = 2^-23 * 2^(1-127) = 2^-149
+  //                    000000000..10    M = 2^-22,  val = 2^-22 * 2^(1-127) = 2^-148
+  // biggest denormal:  0000000001..0    M = 2^-1,  val = 2^-1 * 2^(1-127) = 2^-127
+  // smallest normal:   000000001...0    M = 1,  val = 2^(1-127) = 2^-126
+  // biggest normal:    011111110...0    M = 1,  val = 2^(254-127) = 2^127
+  // +inf               011111111...0
+  if(x<-149){
+    return 0;
+  }
+  if(x<=-127){
+    return 1 << (149+x);
+  }
+  // -126 < x < 127
+  if(x<=127){
+    return (127 + x) << 23;
+  }
+    return 0x7f800000u;
 }
